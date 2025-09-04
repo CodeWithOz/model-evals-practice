@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import logging
+from tools.analyze_sales_data import analyze_sales_data
 from tools.lookup_sales import lookup_sales_data
 
 
@@ -10,7 +11,12 @@ logging.basicConfig(
 load_dotenv()
 
 def main():
-    lookup_sales_data("Show me all the sales for store 1320 on November 1st, 2021")
+    sales_data = lookup_sales_data(
+        "Show me all the sales for store 1320 on November 1st, 2021"
+    )
+    analysis = analyze_sales_data("what trends do you see in this data", sales_data)
+
+    print(f"Model's analysis:\n\n{analysis}")
 
 
 if __name__ == "__main__":
