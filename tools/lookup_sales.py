@@ -3,6 +3,8 @@ import pandas as pd
 import duckdb
 import logging
 
+from utils import get_model, invoke_model
+
 logger = logging.getLogger(__name__)
 
 MODEL = "gpt-4o-mini"
@@ -24,9 +26,7 @@ def generate_sql_query(prompt: str, columns: list, table_name: str) -> str:
     )
 
     logger.info("Requesting sql query from model")
-    response = OpenAI().chat.completions.create(
-        model=MODEL, messages=[{"role": "user", "content": formatted_prompt}]
-    )
+    response = invoke_model(get_model(), formatted_prompt)
     logger.info("Received sql query from model")
 
     return response.choices[0].message.content
