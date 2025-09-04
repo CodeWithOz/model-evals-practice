@@ -1,10 +1,19 @@
 from pydantic import BaseModel, Field
 
-from utils import get_model, invoke_model_with_structured_output
+from utils import get_model, invoke_model, invoke_model_with_structured_output
 
 CHART_CONFIGURATION_PROMPT = """
 Generate a chart configuration based on this data: {data}
 The goal is to show: {visualization_goal}
+"""
+
+
+CREATE_CHART_PROMPT = """
+Write python code to create a chart based on the following configuration.
+
+Only return the code, no other text.
+
+config: {config}
 """
 
 
@@ -32,6 +41,7 @@ def extract_chart_config(data: str, visualization_goal: str) -> dict:
         data=data, visualization_goal=visualization_goal
     )
 
+    print("Generating chart config with model")
     chart_config: VisualizationConfig = (
         invoke_model_with_structured_output(get_model(), formatted_prompt, VisualizationConfig)
     ).choices[0].message.parsed
@@ -55,3 +65,26 @@ def extract_chart_config(data: str, visualization_goal: str) -> dict:
             "title": visualization_goal,
             "data": data,
         }
+
+
+def create_chart(config: dict):
+    """Create a chart based on the configuration"""
+    formatted_prompt = CREATE_CHART_PROMPT.format(config=config)
+
+    print("Generating chart code with model")
+    chart_code = (
+        invoke_model(get_model(), formatted_prompt).choices[0].message.content
+        or "No chart code available"
+    )
+    chart_code = chart_code.replace("```python", "").replace("```", "").strip()
+
+    print(f"Generated chart code:\n\n{chart_code}")
+
+    return chart_code
+
+
+def generate_visualization(data: str, visualization_goal: str) -> str:
+    chart_config = extract_chart_config(data, visualization_goal)
+    chart_code = create_chart(chart_config)
+
+    return chart_code

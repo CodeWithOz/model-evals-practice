@@ -15,4 +15,8 @@ def analyze_sales_data(prompt: str, data: str) -> str:
     response = invoke_model(get_model(), formatted_prompt)
     print("Performed data analysis with model")
 
-    return response.choices[0].message.content or "No analysis available"
+    analysis = response.choices[0].message.content or "No analysis available"
+
+    print(f"Analysis:\n\n{analysis}")
+
+    return analysis
