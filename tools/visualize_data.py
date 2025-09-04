@@ -43,8 +43,14 @@ def extract_chart_config(data: str, visualization_goal: str) -> dict:
 
     print("Generating chart config with model")
     chart_config: VisualizationConfig = (
-        invoke_model_with_structured_output(get_model(), formatted_prompt, VisualizationConfig)
-    ).choices[0].message.parsed
+        (
+            invoke_model_with_structured_output(
+                get_model(), VisualizationConfig, prompt=formatted_prompt
+            )
+        )
+        .choices[0]
+        .message.parsed
+    )
 
     print(f"Generated chart config:\n\n{chart_config.model_dump_json()}")
 

@@ -1,3 +1,4 @@
+from typing import Optional
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -11,30 +12,49 @@ def get_model():
     return OpenAI(**kwargs)
 
 
-def invoke_model(model: OpenAI, prompt: str):
+def invoke_model(
+    model: OpenAI,
+    prompt: Optional[str] = None,
+    messages: Optional[list] = None,
+    tools: Optional[list] = None,
+):
+    if messages is None:
+        messages = []
+
+    if tools is None:
+        tools = []
+
+    if isinstance(prompt, str):
+        messages.append({"role": "user", "content": prompt})
+
     return model.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ],
+        messages=messages,
         # model="gpt-4o-mini",
         model="google/gemma-3n-e4b",
+        tools=tools,
     )
 
 
 def invoke_model_with_structured_output(
-    model: OpenAI, prompt: str, output_format: BaseModel
+    model: OpenAI,
+    output_format: BaseModel,
+    prompt: Optional[str] = None,
+    messages: Optional[list] = None,
+    tools: Optional[list] = None,
 ):
+    if messages is None:
+        messages = []
+
+    if tools is None:
+        tools = []
+
+    if isinstance(prompt, str):
+        messages.append({"role": "user", "content": prompt})
+
     return model.chat.completions.parse(
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ],
+        messages=messages,
         # model="gpt-4o-mini",
         model="google/gemma-3n-e4b",
+        tools=tools,
         response_format=output_format,
     )
