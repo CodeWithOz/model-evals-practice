@@ -1,4 +1,5 @@
 from openai import OpenAI
+from pydantic import BaseModel
 
 
 def get_model():
@@ -20,4 +21,20 @@ def invoke_model(model: OpenAI, prompt: str):
         ],
         # model="gpt-4o-mini",
         model="google/gemma-3n-e4b",
+    )
+
+
+def invoke_model_with_structured_output(
+    model: OpenAI, prompt: str, output_format: BaseModel
+):
+    return model.chat.completions.parse(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+        # model="gpt-4o-mini",
+        model="google/gemma-3n-e4b",
+        response_format=output_format,
     )

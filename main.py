@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import logging
 from tools.analyze_sales_data import analyze_sales_data
 from tools.lookup_sales import lookup_sales_data
+from tools.visualize_data import extract_chart_config
 
 
 logging.basicConfig(
@@ -17,6 +18,10 @@ def main():
     analysis = analyze_sales_data("what trends do you see in this data", sales_data)
 
     print(f"Model's analysis:\n\n{analysis}")
+
+    chart_config = extract_chart_config(
+        sales_data, f"capture the first trend in the analysis: {analysis}"
+    )
 
 
 if __name__ == "__main__":
