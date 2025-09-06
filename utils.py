@@ -3,6 +3,23 @@ from openai import OpenAI
 from cerebras.cloud.sdk import Cerebras
 from pydantic import BaseModel
 import os
+from phoenix.otel import register
+from openinference.instrumentation.openai import OpenAIInstrumentor
+
+
+PROJECT_NAME = "model-evals-practice"
+
+
+arize_tracer_provider = register(
+    project_name=PROJECT_NAME,
+    endpoint=os.environ.get("PHOENIX_COLLECTOR_ENDPOINT") + "/v1/traces",
+)
+
+OpenAIInstrumentor().instrument(tracer_provider=arize_tracer_provider)
+
+
+def get_tracer(file_name: str):
+    return arize_tracer_provider.get_tracer(file_name)
 
 
 def get_model():
@@ -16,8 +33,8 @@ def get_model():
 
 
 def invoke_model(
-    # model: OpenAI,
-    model: Cerebras,
+    model: OpenAI,
+    # model: Cerebras,
     prompt: Optional[str] = None,
     messages: Optional[list] = None,
     tools: Optional[list] = None,
@@ -41,8 +58,8 @@ def invoke_model(
 
 
 def invoke_model_with_structured_output(
-    # model: OpenAI,
-    model: Cerebras,
+    model: OpenAI,
+    # model: Cerebras,
     output_format: BaseModel,
     prompt: Optional[str] = None,
     messages: Optional[list] = None,

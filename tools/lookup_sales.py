@@ -1,11 +1,13 @@
-from openai import OpenAI
+from opentelemetry.trace import Status, StatusCode
 import pandas as pd
 import duckdb
 import logging
 
-from utils import get_model, invoke_model
+from utils import get_model, get_tracer, invoke_model
 
 logger = logging.getLogger(__name__)
+
+tracer = get_tracer(__name__)
 
 MODEL = "gpt-4o-mini"
 TRANSACTION_DATA_FILE_PATH = "data/Store_Sales_Price_Elasticity_Promotions_Data.parquet"
@@ -32,25 +34,37 @@ def generate_sql_query(prompt: str, columns: list, table_name: str) -> str:
     return response.choices[0].message.content
 
 
+@tracer.tool()
 def lookup_sales_data(prompt: str) -> str:
-    table_name = "sales"
+    try:
+        table_name = "sales"
 
-    # initialize SQL table
-    logger.info("Creating db from parquet file")
-    df = pd.read_parquet(TRANSACTION_DATA_FILE_PATH)
-    duckdb.sql(f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM df")
-    logger.info("Created db from parquet file")
+        # initialize SQL table
+        logger.info("Creating db from parquet file")
+        df = pd.read_parquet(TRANSACTION_DATA_FILE_PATH)
+        duckdb.sql(f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM df")
+        logger.info("Created db from parquet file")
 
-    # get the SQL query to execute
-    sql_query = generate_sql_query(prompt, df.columns.tolist(), table_name)
+        # get the SQL query to execute
+        sql_query = generate_sql_query(prompt, df.columns.tolist(), table_name)
 
-    # remove ``` from the query
-    sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+        # remove ``` from the query
+        sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 
-    # execute the chatbot's query
-    logger.info("Executing query from model")
-    result = duckdb.sql(sql_query)
-    result.show()
-    logger.info("Executed query from model")
+        with tracer.start_as_current_span(
+            "execute_sql_query", openinference_span_kind="chain"
+        ) as span:
+            span.set_input(sql_query)
+            # execute the chatbot's query
+            logger.info("Executing query from model")
+            result = duckdb.sql(sql_query)
+            result_df = result.df()
+            span.set_output(value=str(result_df))
+            span.set_status(StatusCode.OK)
+            result.show()
+            logger.info("Executed query from model")
 
-    return result.df().to_string()
+        return result.df().to_string()
+    except Exception as e:
+        logger.error(f"Error accessing data: {str(e)}")
+        return f"Error accessing data: {str(e)}"
