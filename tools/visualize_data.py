@@ -1,6 +1,13 @@
 from pydantic import BaseModel, Field
 
-from utils import get_model, invoke_model, invoke_model_with_structured_output
+from utils import (
+    get_model,
+    invoke_model,
+    invoke_model_with_structured_output,
+    get_tracer,
+)
+
+tracer = get_tracer(__name__)
 
 CHART_CONFIGURATION_PROMPT = """
 Generate a chart configuration based on this data: {data}
@@ -26,6 +33,7 @@ class VisualizationConfig(BaseModel):
     title: str = Field(..., description="Title of the chart")
 
 
+@tracer.chain()
 def extract_chart_config(data: str, visualization_goal: str) -> dict:
     """
     Generate chart visualization configuration
@@ -73,6 +81,7 @@ def extract_chart_config(data: str, visualization_goal: str) -> dict:
         }
 
 
+@tracer.chain()
 def create_chart(config: dict):
     """Create a chart based on the configuration"""
     formatted_prompt = CREATE_CHART_PROMPT.format(config=config)
@@ -89,6 +98,7 @@ def create_chart(config: dict):
     return chart_code
 
 
+@tracer.tool()
 def generate_visualization(data: str, visualization_goal: str) -> str:
     chart_config = extract_chart_config(data, visualization_goal)
     chart_code = create_chart(chart_config)

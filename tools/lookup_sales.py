@@ -1,4 +1,4 @@
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import StatusCode
 import pandas as pd
 import duckdb
 import logging
