@@ -28,9 +28,9 @@ def get_tracer(file_name: str):
 
 def get_model():
     kwargs = {
-        "base_url": "http://localhost:1234/v1",
+        # "base_url": "http://localhost:1234/v1",
         # API key is not required for the local server, but a placeholder is needed by the SDK
-        "api_key": "lm-studio",
+        # "api_key": "lm-studio",
     }
     return OpenAI(**kwargs)
     # return Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY"))
@@ -54,8 +54,8 @@ def invoke_model(
 
     return model.chat.completions.create(
         messages=messages,
-        # model="gpt-4o-mini",
-        model="google/gemma-3n-e4b",
+        model="gpt-4o-mini",
+        # model="google/gemma-3n-e4b",
         # model="gpt-oss-120b",
         tools=tools,
     )
@@ -80,8 +80,8 @@ def invoke_model_with_structured_output(
 
     return model.chat.completions.parse(
         messages=messages,
-        # model="gpt-4o-mini",
-        model="google/gemma-3n-e4b",
+        model="gpt-4o-mini",
+        # model="google/gemma-3n-e4b",
         # model="gpt-oss-120b",
         tools=tools,
         response_format=output_format,
