@@ -5,6 +5,10 @@ from pydantic import BaseModel
 import os
 from phoenix.otel import register
 from openinference.instrumentation.openai import OpenAIInstrumentor
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 
 PROJECT_NAME = "model-evals-practice"
