@@ -88,6 +88,7 @@ class AgentRouter:
 
     @tracer.chain()
     def handle_tool_calls(self, tool_calls: list[dict], messages: list):
+        tool_results = {}
         print(f"Invoking {len(tool_calls)} tool calls")
         for tool_call in tool_calls:
             function = self.tool_implementations[tool_call.function.name]
@@ -100,10 +101,11 @@ class AgentRouter:
                     "tool_call_id": tool_call.id,
                 }
             )
+            tool_results.setdefault(tool_call.id, tool_res)
 
         print(f"Invoked {len(tool_calls)} tool calls")
 
-        return messages
+        return messages, tool_results
 
     def run_agent(self, messages: list | str):
         print("Running agent with messages:", messages)
@@ -127,7 +129,9 @@ class AgentRouter:
                 )
                 message = response.choices[0].message
                 span.set_status(StatusCode.OK)
-                message_content = message.content or "No router response"
+                message_content = (
+                    message.content or "Router returned empty message content"
+                )
                 print(f"Received router response: {message_content!r}")
                 messages.append(message)
 
@@ -136,9 +140,19 @@ class AgentRouter:
                     print(
                         f"Router response contained {len(message.tool_calls)} tool calls"
                     )
-                    self.handle_tool_calls(message.tool_calls, messages)
-                    span.set_output(value=message.tool_calls)
+                    _, tool_results = self.handle_tool_calls(
+                        message.tool_calls, messages
+                    )
+                    span_output = {
+                        tool_call.id: {
+                            **json.loads(tool_call.to_json()),
+                            "tool_call_res": tool_results.get(tool_call.id, None),
+                        }
+                        for tool_call in message.tool_calls
+                    }
+                    span.set_output(value=span_output)
                 else:
                     # no tool calls, return the model's final response
                     print("Router created no tool calls, returning final response")
+                    span.set_output(value=message_content)
                     return message_content
