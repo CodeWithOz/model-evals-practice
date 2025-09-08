@@ -51,12 +51,12 @@ def lookup_sales_data(prompt: str) -> str:
         # remove ``` from the query
         sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 
+        # execute the chatbot's query
+        logger.info("Executing query from model")
         with tracer.start_as_current_span(
             "execute_sql_query", openinference_span_kind="chain"
         ) as span:
             span.set_input(sql_query)
-            # execute the chatbot's query
-            logger.info("Executing query from model")
             result = duckdb.sql(sql_query)
             result_df = result.df()
             span.set_output(value=str(result_df))

@@ -1,8 +1,12 @@
 import json
+from opentelemetry.trace import StatusCode
 from tools.analyze_sales_data import analyze_sales_data
 from tools.lookup_sales import lookup_sales_data
 from tools.visualize_data import generate_visualization
-from utils import get_model, invoke_model
+from utils import get_model, invoke_model, get_tracer
+
+
+tracer = get_tracer(__name__)
 
 
 class AgentRouter:
@@ -82,6 +86,7 @@ class AgentRouter:
     def __init__(self):
         pass
 
+    @tracer.chain()
     def handle_tool_calls(self, tool_calls: list[dict], messages: list):
         print(f"Invoking {len(tool_calls)} tool calls")
         for tool_call in tool_calls:
@@ -113,17 +118,27 @@ class AgentRouter:
 
         while True:
             print("Making router call to model provider")
-            response = invoke_model(get_model(), messages=messages, tools=self.tools)
-            message = response.choices[0].message
-            message_content = message.content or "No router response"
-            print(f"Received router response: {message_content!r}")
-            messages.append(message)
+            with tracer.start_as_current_span(
+                "router_call", openinference_span_kind="chain"
+            ) as span:
+                span.set_input(value=messages)
+                response = invoke_model(
+                    get_model(), messages=messages, tools=self.tools
+                )
+                message = response.choices[0].message
+                span.set_status(StatusCode.OK)
+                message_content = message.content or "No router response"
+                print(f"Received router response: {message_content!r}")
+                messages.append(message)
 
-            # handle tool calls if necessary
-            if message.tool_calls:
-                print(f"Router response contained {len(message.tool_calls)} tool calls")
-                self.handle_tool_calls(message.tool_calls, messages)
-            else:
-                # no tool calls, return the model's final response
-                print("Router created no tool calls, returning final response")
-                return message_content
+                # handle tool calls if necessary
+                if message.tool_calls:
+                    print(
+                        f"Router response contained {len(message.tool_calls)} tool calls"
+                    )
+                    self.handle_tool_calls(message.tool_calls, messages)
+                    span.set_output(value=message.tool_calls)
+                else:
+                    # no tool calls, return the model's final response
+                    print("Router created no tool calls, returning final response")
+                    return message_content
